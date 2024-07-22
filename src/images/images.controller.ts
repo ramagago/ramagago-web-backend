@@ -8,9 +8,11 @@ import {
   Get,
   Patch,
   Query,
+  UsePipes,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from './images.service';
+import { ParseArrayToNumberPipe } from '../pipes/parse-array-to-number.pipe';
 
 @Controller('images')
 export class ImagesController {
@@ -27,6 +29,7 @@ export class ImagesController {
   }
 
   @Delete('many')
+  @UsePipes(new ParseArrayToNumberPipe())
   async deleteMany(@Body() ids: number[]) {
     console.log('hola');
     return this.imagesService.deleteMany(ids);
