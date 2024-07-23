@@ -9,10 +9,14 @@ import {
   Patch,
   Query,
   UsePipes,
+  ValidationPipe,
+  ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from './images.service';
 import { ParseArrayToNumberPipe } from '../pipes/parse-array-to-number.pipe';
+import { UpdateDescriptionDto } from './dto/update-description.dto';
 
 @Controller('images')
 export class ImagesController {
@@ -48,5 +52,22 @@ export class ImagesController {
     @Body() updateOrderDto: { id: number; order: number }[],
   ) {
     return this.imagesService.updateImageOrder(updateOrderDto);
+  }
+
+  @Patch('description')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async updateDescription(
+    @Body('id', ParseIntPipe) id: number, // Usa el ParseIntPipe para transformar el id
+    @Body() updateDescriptionDto: UpdateDescriptionDto,
+  ) {
+    const { description } = updateDescriptionDto;
+
+    if (!id) {
+      throw new BadRequestException('Id is required');
+    }
+
+    await this.imagesService.updateDescription(id, description);
+
+    return { message: 'Description updated successfully' };
   }
 }
