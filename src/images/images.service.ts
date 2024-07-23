@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { Image } from '@prisma/client';
@@ -100,5 +100,17 @@ export class ImagesService {
     });
 
     await Promise.all(updatePromises);
+  }
+  async updateDescription(id: number, description: string): Promise<void> {
+    const image = await this.prisma.image.findUnique({ where: { id } });
+
+    if (!image) {
+      throw new NotFoundException(`Image with id ${id} not found`);
+    }
+
+    await this.prisma.image.update({
+      where: { id },
+      data: { description },
+    });
   }
 }
