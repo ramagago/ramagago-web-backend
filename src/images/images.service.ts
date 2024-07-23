@@ -11,38 +11,28 @@ export class ImagesService {
   ) {}
 
   async createImages(
-    files: Express.Multer.File[],
-    imageData: { description: string; category: string; order: number }[],
-  ): Promise<Image[]> {
-    const createImagePromises = files.map(async (file, index) => {
-      const { description, category } = imageData[index];
-      console.log('Procesando archivo:', file.originalname); // Log de depuración
-
-      const url = await this.uploadService.upload(
-        file.originalname,
-        file.buffer,
-      );
-      console.log('Archivo subido a S3:', url); // Log de depuración
-
-      // Obtener la última imagen para determinar el siguiente order por categoría
-      const lastImageInCategory = await this.prisma.image.findFirst({
-        where: { category },
-        orderBy: { order: 'desc' },
-      });
-
-      const newOrder = lastImageInCategory ? lastImageInCategory.order + 1 : 0;
-
-      return this.prisma.image.create({
-        data: {
-          url,
-          description,
-          category,
-          order: newOrder,
-        },
-      });
+    imageData: {
+      description: string;
+      category: string;
+      url: string;
+    }[],
+  ): Promise<any> {
+    const highestOrder = await this.prisma.image.aggregate({
+      _max: {
+        order: true,
+      },
     });
 
-    return await Promise.all(createImagePromises);
+    let nextOrder = (highestOrder._max.order || 0) + 1;
+
+    const imagesToCreate = imageData.map((image) => ({
+      ...image,
+      order: nextOrder++, // Asigna el próximo número disponible
+    }));
+
+    return this.prisma.image.createMany({
+      data: imagesToCreate,
+    });
   }
 
   async deleteMany(ids: number[]): Promise<void> {
@@ -63,7 +53,7 @@ export class ImagesService {
     // Eliminar las imágenes de S3
     const deletePromises = imagesToDelete.map((image) => {
       console.log('Eliminando URL:', image.url);
-      return this.uploadService.deleteObject(image.url); // Utilizar deleteObject en lugar de delete
+      return this.uploadService.deleteObject(image.url);
     });
     await Promise.all(deletePromises);
 
@@ -101,6 +91,7 @@ export class ImagesService {
 
     await Promise.all(updatePromises);
   }
+
   async updateDescription(id: number, description: string): Promise<void> {
     const image = await this.prisma.image.findUnique({ where: { id } });
 

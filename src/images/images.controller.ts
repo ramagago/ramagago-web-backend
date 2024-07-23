@@ -2,18 +2,14 @@ import {
   Controller,
   Post,
   Body,
-  UseInterceptors,
-  UploadedFiles,
   Delete,
   Get,
   Patch,
   Query,
   UsePipes,
-  ValidationPipe,
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from './images.service';
 import { ParseArrayToNumberPipe } from '../pipes/parse-array-to-number.pipe';
 import { UpdateDescriptionDto } from './dto/update-description.dto';
@@ -23,19 +19,33 @@ export class ImagesController {
   constructor(private readonly imagesService: ImagesService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('files'))
   async uploadImages(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body('imageData') imageData: string,
+    @Body()
+    body: {
+      imageData: {
+        description: string;
+        category: string;
+        order: number;
+        url: string;
+      }[];
+    },
   ) {
-    const parsedImageData = JSON.parse(imageData);
-    return this.imagesService.createImages(files, parsedImageData);
+    const { imageData } = body;
+
+    if (!imageData || imageData.length === 0) {
+      throw new BadRequestException('No image data provided');
+    }
+
+    try {
+      return this.imagesService.createImages(imageData);
+    } catch (error) {
+      throw new BadRequestException('Failed to process image data');
+    }
   }
 
   @Delete('many')
   @UsePipes(new ParseArrayToNumberPipe())
   async deleteMany(@Body() ids: number[]) {
-    console.log('hola');
     return this.imagesService.deleteMany(ids);
   }
 
@@ -55,9 +65,8 @@ export class ImagesController {
   }
 
   @Patch('description')
-  @UsePipes(new ValidationPipe({ transform: true }))
   async updateDescription(
-    @Body('id', ParseIntPipe) id: number, // Usa el ParseIntPipe para transformar el id
+    @Body('id', ParseIntPipe) id: number,
     @Body() updateDescriptionDto: UpdateDescriptionDto,
   ) {
     const { description } = updateDescriptionDto;
