@@ -13,6 +13,7 @@ model Image {
   description String @default("")
   category    String
   order       Int
+  type        String
 }
 
 model User {
