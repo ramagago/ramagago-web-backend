@@ -27,7 +27,7 @@ export class ImagesController {
         category: string;
         order: number;
         url: string;
-        type: string;
+        type: string; // Añadir type aquí
       }[];
     },
   ) {
@@ -51,11 +51,14 @@ export class ImagesController {
   }
 
   @Get()
-  async getImages(@Query('category') category?: string) {
-    if (category) {
-      return this.imagesService.getImagesByCategory(category);
-    }
-    return this.imagesService.getAllImages();
+  async getImages(
+    @Query('category') category?: string,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('limit', ParseIntPipe) limit: number = 10,
+  ) {
+    const offset = (page - 1) * limit;
+
+    return this.imagesService.getImagesByCategory(category, limit, offset);
   }
 
   @Patch('order')
