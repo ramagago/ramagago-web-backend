@@ -3,8 +3,9 @@ import {
   S3Client,
   DeleteObjectCommand,
   PutObjectCommand,
-} from '@aws-sdk/client-s3'; // Importar los comandos necesarios
+} from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
 export class UploadService {
@@ -19,36 +20,45 @@ export class UploadService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async upload(fileName: string, file: Buffer): Promise<string> {
+  async getUploadUrl(key: string): Promise<string> {
     const bucketName = this.configService.getOrThrow('AWS_S3_BUCKET');
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      ContentType: 'image/jpeg', // Ajusta esto según el tipo de archivo
+    });
 
     try {
-      await this.s3Client.send(
-        new PutObjectCommand({
-          Bucket: bucketName,
-          Key: fileName,
-          Body: file,
-        }),
-      );
-
-      const url = `https://${bucketName}.s3.${this.configService.getOrThrow('AWS_S3_REGION')}.amazonaws.com/${fileName}`;
-      this.logger.log(`Uploaded file "${fileName}" to S3. URL: ${url}`);
-
-      return url;
+      const uploadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn: 300,
+      });
+      return uploadUrl;
     } catch (error) {
-      this.logger.error(
-        `Failed to upload file "${fileName}" to S3`,
-        error.stack,
-      );
-      throw new Error(`Failed to upload file "${fileName}" to S3`);
+      this.logger.error(`Failed to get upload URL for "${key}"`, error.stack);
+      throw new Error(`Failed to get upload URL for "${key}"`);
     }
   }
-
   async deleteObject(url: string): Promise<void> {
     const bucketName = this.configService.getOrThrow('AWS_S3_BUCKET');
-    const key = url.split(
-      `https://${bucketName}.s3.${this.configService.getOrThrow('AWS_S3_REGION')}.amazonaws.com/`,
-    )[1];
+    const region = this.configService.getOrThrow('AWS_S3_REGION');
+
+    // Asegúrate de que la URL es la esperada
+    this.logger.log(`Deleting URL: ${url}`);
+
+    // Extraer la clave del objeto
+    const key = url.replace(
+      `https://${bucketName}.s3.${region}.amazonaws.com/`,
+      '',
+    );
+
+    // Verificar la clave extraída
+    this.logger.log(`Extracted key: ${key}`);
+
+    // Asegurarse de que la clave no esté vacía
+    if (!key) {
+      this.logger.error(`Invalid key extracted: ${key}`);
+      throw new Error(`Invalid key extracted: ${key}`);
+    }
 
     try {
       await this.s3Client.send(
@@ -65,15 +75,5 @@ export class UploadService {
       );
       throw new Error(`Failed to delete object from S3. URL: ${url}`);
     }
-  }
-
-  async uploadMany(
-    files: { fileName: string; file: Buffer }[],
-  ): Promise<string[]> {
-    const uploadPromises = files.map(({ fileName, file }) =>
-      this.upload(fileName, file),
-    );
-
-    return Promise.all(uploadPromises);
   }
 }
