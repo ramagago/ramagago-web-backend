@@ -68,15 +68,22 @@ export class ImagesService {
     });
   }
 
-  async getAllImages(): Promise<Image[]> {
-    return this.prisma.image.findMany();
+  async getAllImages(limit: number, offset: number): Promise<Image[]> {
+    return this.prisma.image.findMany({
+      take: limit,
+      skip: offset,
+    });
   }
 
-  async getImagesByCategory(category: string): Promise<Image[]> {
+  async getImagesByCategory(
+    category: string,
+    limit: number,
+    offset: number,
+  ): Promise<Image[]> {
     return this.prisma.image.findMany({
-      where: {
-        category,
-      },
+      where: { category },
+      take: limit,
+      skip: offset,
     });
   }
 
