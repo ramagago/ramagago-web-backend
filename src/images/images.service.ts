@@ -15,6 +15,7 @@ export class ImagesService {
       description: string;
       category: string;
       url: string;
+      type: string;
     }[],
   ): Promise<any> {
     const highestOrder = await this.prisma.image.aggregate({

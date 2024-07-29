@@ -27,6 +27,7 @@ export class ImagesController {
         category: string;
         order: number;
         url: string;
+        type: string;
       }[];
     },
   ) {
