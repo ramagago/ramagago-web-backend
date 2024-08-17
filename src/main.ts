@@ -4,14 +4,14 @@ import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.int
 import * as fs from 'fs';
 
 async function bootstrap() {
-  const keyFile = fs.readFileSync(process.env.key);
-  const certFile = fs.readFileSync(process.env.cert);
+  const keyFile = fs.readFileSync(process.env.KEY_PATH);
+  const certFile = fs.readFileSync(process.env.KEY_PATH);
 
   const app = await NestFactory.create(AppModule, {
-    httpsOptions: {
-      key: keyFile,
-      cert: certFile,
-    },
+    // httpsOptions: {
+    //   key: keyFile,
+    //   cert: certFile,
+    // },
   });
 
   const corsOptions: CorsOptions = {
@@ -21,6 +21,6 @@ async function bootstrap() {
   };
 
   app.enableCors(corsOptions);
-  await app.listen(443);
+  await app.listen(3001);
 }
 bootstrap();

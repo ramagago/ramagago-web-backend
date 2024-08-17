@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Image" ADD COLUMN     "videoPreviewURL" TEXT,
+ALTER COLUMN "lowQualityUrl" DROP NOT NULL,
+ALTER COLUMN "blurDataURL" DROP NOT NULL;

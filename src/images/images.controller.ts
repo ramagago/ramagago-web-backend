@@ -9,6 +9,8 @@ import {
   UsePipes,
   ParseIntPipe,
   BadRequestException,
+  Param,
+  NotFoundException,
 } from '@nestjs/common';
 import { ImagesService } from './images.service';
 import { ParseArrayToNumberPipe } from '../pipes/parse-array-to-number.pipe';
@@ -26,8 +28,11 @@ export class ImagesController {
         description: string;
         category: string;
         order: number;
-        url: string;
-        type: string; // Añadir type aquí
+        blurDataUrl?: string;
+        lowQualityUrl?: string;
+        normalUrl: string;
+        type: string;
+        videoPreviewUrl?: string; // Añadido para el videoPreview
       }[];
     },
   ) {
@@ -59,6 +64,15 @@ export class ImagesController {
     const offset = (page - 1) * limit;
 
     return this.imagesService.getImagesByCategory(category, limit, offset);
+  }
+
+  @Get(':id')
+  async getImageById(@Param('id', ParseIntPipe) id: number) {
+    const image = await this.imagesService.getImageById(id);
+    if (!image) {
+      throw new NotFoundException(`Image with id ${id} not found`);
+    }
+    return image;
   }
 
   @Patch('order')

@@ -8,12 +8,15 @@ datasource db {
 }
 
 model Image {
-  id          Int    @id @default(autoincrement())
-  url         String
-  description String @default("")
-  category    String
-  order       Int
-  type        String
+  id           Int      @id @default(autoincrement())
+  description  String
+  category     String
+  order        Int
+  normalUrl    String
+  lowQualityUrl String?
+  blurDataUrl  String?
+  videoPreviewUrl String?
+  type         String
 }
 
 model User {

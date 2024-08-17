@@ -14,8 +14,11 @@ export class ImagesService {
     imageData: {
       description: string;
       category: string;
-      url: string;
+      blurDataUrl?: string;
+      lowQualityUrl?: string;
+      normalUrl: string;
       type: string;
+      videoPreviewUrl?: string; // Añadido para el videoPreview
     }[],
   ): Promise<any> {
     const highestOrder = await this.prisma.image.aggregate({
@@ -27,7 +30,13 @@ export class ImagesService {
     let nextOrder = (highestOrder._max.order || 0) + 1;
 
     const imagesToCreate = imageData.map((image) => ({
-      ...image,
+      description: image.description,
+      category: image.category,
+      blurDataUrl: image.blurDataUrl,
+      lowQualityUrl: image.lowQualityUrl,
+      normalUrl: image.normalUrl,
+      type: image.type,
+      videoPreviewUrl: image.videoPreviewUrl, // Añadido para el videoPreview
       order: nextOrder++, // Asigna el próximo número disponible
     }));
 
@@ -37,7 +46,7 @@ export class ImagesService {
   }
 
   async deleteMany(ids: number[]): Promise<void> {
-    // Obtener las URLs de las imágenes a eliminar
+    // Obtener las Urls de las imágenes a eliminar
     const imagesToDelete = await this.prisma.image.findMany({
       where: {
         id: {
@@ -45,17 +54,29 @@ export class ImagesService {
         },
       },
       select: {
-        url: true,
+        blurDataUrl: true,
+        lowQualityUrl: true,
+        normalUrl: true,
+        videoPreviewUrl: true, // Añadido para el videoPreview
       },
     });
 
     console.log('Imágenes a eliminar:', imagesToDelete);
 
     // Eliminar las imágenes de S3
-    const deletePromises = imagesToDelete.map((image) => {
-      console.log('Eliminando URL:', image.url);
-      return this.uploadService.deleteObject(image.url);
+    const deletePromises = imagesToDelete.flatMap((image) => {
+      console.log('Eliminando lowQualityUrl:', image.lowQualityUrl);
+      console.log('Eliminando normalUrl:', image.normalUrl);
+      console.log('Eliminando videoPreviewUrl:', image.videoPreviewUrl); // Añadido para el videoPreview
+      return [
+        this.uploadService.deleteObject(image.lowQualityUrl),
+        this.uploadService.deleteObject(image.normalUrl),
+        image.videoPreviewUrl
+          ? this.uploadService.deleteObject(image.videoPreviewUrl)
+          : null, // Eliminar videoPreviewUrl si existe
+      ].filter(Boolean);
     });
+
     await Promise.all(deletePromises);
 
     // Eliminar las imágenes de la base de datos
@@ -72,6 +93,12 @@ export class ImagesService {
     return this.prisma.image.findMany({
       take: limit,
       skip: offset,
+    });
+  }
+
+  async getImageById(id: number): Promise<Image | null> {
+    return this.prisma.image.findUnique({
+      where: { id },
     });
   }
 
