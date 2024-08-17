@@ -8,10 +8,10 @@ async function bootstrap() {
   const certFile = fs.readFileSync(process.env.KEY_PATH);
 
   const app = await NestFactory.create(AppModule, {
-    // httpsOptions: {
-    //   key: keyFile,
-    //   cert: certFile,
-    // },
+    httpsOptions: {
+      key: keyFile,
+      cert: certFile,
+    },
   });
 
   const corsOptions: CorsOptions = {
